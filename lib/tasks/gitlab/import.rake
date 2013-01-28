@@ -42,6 +42,11 @@ namespace :gitlab do
 
           project_params = {
             :name => path,
+            :namespace_id => Namespace.global_id,
+            :issues_enabled => 0,
+            :wall_enabled => 0,
+            :merge_requests_enabled => 0,
+            :wiki_enabled => 0,
           }
 
           project = Project.create_by_user(project_params, user)

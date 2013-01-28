@@ -20,5 +20,12 @@ namespace :gitlab do
 
       UsersProject.user_bulk_import(user, project_ids, UsersProject::DEVELOPER)
     end
+
+    desc "GITLAB | Add a specific user to a specific project (as a developer)"
+    task :user_to_project, [:email,:project_path] => :environment  do |t, args|
+      user = User.find_by_email args.email
+      project_ids = Project.where(:path => args.project_path).pluck(:id)
+      UsersProject.user_bulk_import(user, project_ids, UsersProject::DEVELOPER)
+    end
   end
 end
