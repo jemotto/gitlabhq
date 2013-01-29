@@ -61,5 +61,25 @@ namespace :gitlab do
 
       puts "Done!".green
     end
+
+    desc "GITLAB | Import user from ldap"
+    task :create_user, [:login,:email] => :environment do |t, args|
+      user = User.find_by_email args.email
+      password = Devise.friendly_token[0, 8].downcase
+      @user = User.new({
+        extern_uid: 'CN=' + args.login + ',OU=Users,OU=Organic Units,DC=cern,DC=ch',
+        provider: 'ldap',
+        name: args.login,
+        username: args.email.match(/^[^@]*/)[0],
+        email: args.email,
+        password: 'asdqwe123',
+        password_confirmation: 'asdqwe123',
+        projects_limit: Gitlab.config.gitlab.default_projects_limit,
+      }, as: :admin)
+      @user.blocked = false
+      @user.save!
+      @user
+    end
+
   end
 end
