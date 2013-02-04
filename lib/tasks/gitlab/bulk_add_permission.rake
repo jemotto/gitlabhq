@@ -48,7 +48,7 @@ namespace :gitlab do
       project = Project.where(:path => args.project_path)
 	  UsersProject.where(:project_id => project.id).each do |users_project|
 	    if not users_ids.include?(users_project.user_id)
-	      UsersProject.delete(users_project.id)
+	      users_project.destroy
 	    end
 	  end
       if users_ids.any?
