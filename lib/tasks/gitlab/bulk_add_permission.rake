@@ -46,7 +46,7 @@ namespace :gitlab do
 	    users_ids.concat(id);
       end
       project = Project.where(:path => args.project_path)
-	  UsersProject.where(:project_id => project.id).each do |users_project|
+	  UsersProject.where(:project_id => project[0].id).each do |users_project|
 	    if not users_ids.include?(users_project.user_id)
 	      users_project.destroy
 	    end
