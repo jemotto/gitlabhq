@@ -46,10 +46,12 @@ namespace :gitlab do
 	    users_ids.concat(id);
       end
       project = Project.where(:path => args.project_path)
-	  UsersProject.where(:project_id => project[0].id).each do |users_project|
-	    if not users_ids.include?(users_project.user_id)
-	      users_project.destroy
-	    end
+	  if project.any?
+		UsersProject.where(:project_id => project[0].id).each do |users_project|
+		  if not users_ids.include?(users_project.user_id)
+		    users_project.destroy
+		  end
+		end
 	  end
       if users_ids.any?
         UsersProject.bulk_import(project[0], users_ids, UsersProject::DEVELOPER)
