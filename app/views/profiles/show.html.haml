@@ -6,6 +6,11 @@
   %small
     = @user.email
 
+  .right
+    = link_to destroy_user_session_path, class: "logout", method: :delete do
+      %small
+        %i.icon-signout
+        Logout
 %hr
 
 = form_for @user, url: profile_path, method: :put, html: { class: "edit_user form-horizontal" }  do |f|
@@ -64,7 +69,7 @@
         %legend
           Personal projects:
           %small.right
-            %span= current_user.my_own_projects.count
+            %span= current_user.personal_projects.count
             of
             %span= current_user.projects_limit
         .padded

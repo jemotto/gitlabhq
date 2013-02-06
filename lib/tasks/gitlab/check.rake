@@ -2,7 +2,7 @@ namespace :gitlab do
   desc "GITLAB | Check the configuration of GitLab and its environment"
   task check: %w{gitlab:env:check
                  gitlab:gitolite:check
-                 gitlab:resque:check
+                 gitlab:sidekiq:check
                  gitlab:app:check}
 
 
@@ -142,7 +142,7 @@ namespace :gitlab do
         return
       end
 
-      recipe_content = `curl https://raw.github.com/gitlabhq/gitlab-recipes/4-0-stable/init.d/gitlab 2>/dev/null`
+      recipe_content = `curl https://raw.github.com/gitlabhq/gitlab-recipes/4-1-stable/init.d/gitlab 2>/dev/null`
       script_content = File.read(script_path)
 
       if recipe_content == script_content
@@ -169,7 +169,7 @@ namespace :gitlab do
       else
         puts "no".red
         try_fixing_it(
-          "sudo -u gitlab -H bundle exec rake db:migrate"
+          sudo_gitlab("bundle exec rake db:migrate")
         )
         fix_and_rerun
       end
@@ -194,7 +194,7 @@ namespace :gitlab do
         else
           puts "no".red
           try_fixing_it(
-            "sudo -u gitlab -H bundle exec rake gitlab:satellites:create",
+            sudo_gitlab("bundle exec rake gitlab:satellites:create"),
             "If necessary, remove the tmp/repo_satellites directory ...",
             "... and rerun the above command"
           )
@@ -269,7 +269,8 @@ namespace :gitlab do
     ########################
 
     def check_gitlab_git_config
-      print "Git configured for gitlab user? ... "
+      gitlab_user = Gitlab.config.gitlab.user
+      print "Git configured for #{gitlab_user} user? ... "
 
       options = {
         "user.name"  => "GitLab",
@@ -284,8 +285,8 @@ namespace :gitlab do
       else
         puts "no".red
         try_fixing_it(
-          "sudo -u gitlab -H git config --global user.name  \"#{options["user.name"]}\"",
-          "sudo -u gitlab -H git config --global user.email \"#{options["user.email"]}\""
+          sudo_gitlab("git config --global user.name  \"#{options["user.name"]}\""),
+          sudo_gitlab("git config --global user.email \"#{options["user.email"]}\"")
         )
         for_more_information(
           see_installation_guide_section "GitLab"
@@ -295,15 +296,16 @@ namespace :gitlab do
     end
 
     def check_gitlab_in_git_group
-      gitolite_ssh_user = Gitlab.config.gitolite.ssh_user
-      print "gitlab user is in #{gitolite_ssh_user} group? ... "
+      gitlab_user = Gitlab.config.gitlab.user
+      gitolite_owner_group = Gitlab.config.gitolite.owner_group
+      print "#{gitlab_user} user is in #{gitolite_owner_group} group? ... "
 
-      if run_and_match("id -rnG", /\Wgit\W/)
+      if run_and_match("id -rnG", /^#{gitolite_owner_group}\W|\W#{gitolite_owner_group}\W|\W#{gitolite_owner_group}$/)
         puts "yes".green
       else
         puts "no".red
         try_fixing_it(
-          "sudo usermod -a -G #{gitolite_ssh_user} gitlab"
+          "sudo usermod -a -G #{gitolite_owner_group} #{gitlab_user}"
         )
         for_more_information(
           see_installation_guide_section "System Users"
@@ -518,7 +520,8 @@ namespace :gitlab do
 
     def check_dot_gitolite_user_and_group
       gitolite_ssh_user = Gitlab.config.gitolite.ssh_user
-      print "Config directory owned by #{gitolite_ssh_user}:#{gitolite_ssh_user} ... "
+      gitolite_owner_group = Gitlab.config.gitolite.owner_group
+      print "Config directory owned by #{gitolite_ssh_user}:#{gitolite_owner_group} ... "
 
       gitolite_config_path = File.join(gitolite_user_home, ".gitolite")
       unless File.exists?(gitolite_config_path)
@@ -527,12 +530,12 @@ namespace :gitlab do
       end
 
       if File.stat(gitolite_config_path).uid == uid_for(gitolite_ssh_user) &&
-         File.stat(gitolite_config_path).gid == gid_for(gitolite_ssh_user)
+         File.stat(gitolite_config_path).gid == gid_for(gitolite_owner_group)
         puts "yes".green
       else
         puts "no".red
         try_fixing_it(
-          "sudo chown -R #{gitolite_ssh_user}:#{gitolite_ssh_user} #{gitolite_config_path}"
+          "sudo chown -R #{gitolite_ssh_user}:#{gitolite_owner_group} #{gitolite_config_path}"
         )
         for_more_information(
           see_installation_guide_section "Gitolite"
@@ -737,7 +740,8 @@ namespace :gitlab do
 
     def check_repo_base_user_and_group
       gitolite_ssh_user = Gitlab.config.gitolite.ssh_user
-      print "Repo base owned by #{gitolite_ssh_user}:#{gitolite_ssh_user}? ... "
+      gitolite_owner_group = Gitlab.config.gitolite.owner_group
+      print "Repo base owned by #{gitolite_ssh_user}:#{gitolite_owner_group}? ... "
 
       repo_base_path = Gitlab.config.gitolite.repos_path
       unless File.exists?(repo_base_path)
@@ -746,12 +750,12 @@ namespace :gitlab do
       end
 
       if File.stat(repo_base_path).uid == uid_for(gitolite_ssh_user) &&
-         File.stat(repo_base_path).gid == gid_for(gitolite_ssh_user)
+         File.stat(repo_base_path).gid == gid_for(gitolite_owner_group)
         puts "yes".green
       else
         puts "no".red
         try_fixing_it(
-          "sudo chown -R #{gitolite_ssh_user}:#{gitolite_ssh_user} #{repo_base_path}"
+          "sudo chown -R #{gitolite_ssh_user}:#{gitolite_owner_group} #{repo_base_path}"
         )
         for_more_information(
           see_installation_guide_section "Gitolite"
@@ -777,7 +781,7 @@ namespace :gitlab do
         print "#{project.name_with_namespace.yellow} ... "
 
         correct_options = options.map do |name, value|
-          run("git --git-dir=\"#{project.path_to_repo}\" config --get #{name}").try(:chomp) == value
+          run("git --git-dir=\"#{project.repository.path_to_repo}\" config --get #{name}").try(:chomp) == value
         end
 
         if correct_options.all?
@@ -785,7 +789,7 @@ namespace :gitlab do
         else
           puts "wrong or missing".red
           try_fixing_it(
-            "sudo -u gitlab -H bundle exec rake gitlab:gitolite:update_repos"
+            sudo_gitlab("bundle exec rake gitlab:gitolite:update_repos")
           )
           for_more_information(
             "doc/raketasks/maintenance.md"
@@ -816,7 +820,7 @@ namespace :gitlab do
 
       Project.find_each(batch_size: 100) do |project|
         print "#{project.name_with_namespace.yellow} ... "
-        project_hook_file = File.join(project.path_to_repo, "hooks", hook_file)
+        project_hook_file = File.join(project.repository.path_to_repo, "hooks", hook_file)
 
         unless File.exists?(project_hook_file)
           puts "missing".red
@@ -868,36 +872,34 @@ namespace :gitlab do
 
 
 
-  namespace :resque do
-    desc "GITLAB | Check the configuration of Resque"
+  namespace :sidekiq do
+    desc "GITLAB | Check the configuration of Sidekiq"
     task check: :environment  do
       warn_user_is_not_gitlab
-      start_checking "Resque"
+      start_checking "Sidekiq"
 
-      check_resque_running
+      check_sidekiq_running
 
-      finished_checking "Resque"
+      finished_checking "Sidekiq"
     end
 
 
     # Checks
     ########################
 
-    def check_resque_running
+    def check_sidekiq_running
       print "Running? ... "
 
-      if run_and_match("ps aux | grep -i resque", /resque-[\d\.]+:.+$/)
+      if run_and_match("ps aux | grep -i sidekiq", /sidekiq \d\.\d\.\d.+$/)
         puts "yes".green
       else
         puts "no".red
         try_fixing_it(
-          "sudo service gitlab restart",
-          "or",
-          "sudo /etc/init.d/gitlab restart"
+          sudo_gitlab("bundle exec rake sidekiq:start")
         )
         for_more_information(
           see_installation_guide_section("Install Init Script"),
-          "see log/resque.log for possible errors"
+          "see log/sidekiq.log for possible errors"
         )
         fix_and_rerun
       end
@@ -933,6 +935,11 @@ namespace :gitlab do
 
   def see_installation_guide_section(section)
     "doc/install/installation.md in section \"#{section}\""
+  end
+
+  def sudo_gitlab(command)
+    gitlab_user = Gitlab.config.gitlab.user
+    "sudo -u #{gitlab_user} -H #{command}"
   end
 
   def start_checking(component)

@@ -1,11 +1,12 @@
 class Notify < ActionMailer::Base
-  include Resque::Mailer
+
   add_template_helper ApplicationHelper
   add_template_helper GitlabMarkdownHelper
 
   default_url_options[:host]     = Gitlab.config.gitlab.host
   default_url_options[:protocol] = Gitlab.config.gitlab.protocol
   default_url_options[:port]     = Gitlab.config.gitlab.port if Gitlab.config.gitlab_on_non_standard_port?
+  default_url_options[:script_name] = Gitlab.config.gitlab.relative_url_root
 
   default from: Gitlab.config.gitlab.email_from
 
@@ -61,12 +62,12 @@ class Notify < ActionMailer::Base
   # Note
   #
 
-  def note_commit_email(recipient_id, note_id)
+  def note_commit_email(commit_autor_email, note_id)
     @note = Note.find(note_id)
     @commit = @note.noteable
     @commit = CommitDecorator.decorate(@commit)
     @project = @note.project
-    #mail(to: recipient(recipient_id), subject: subject("note for commit #{@commit.short_id}", @commit.title))
+    #mail(to: commit_autor_email, subject: subject("note for commit #{@commit.short_id}", @commit.title))
   end
 
   def note_issue_email(recipient_id, note_id)
@@ -86,7 +87,7 @@ class Notify < ActionMailer::Base
   def note_wall_email(recipient_id, note_id)
     @note = Note.find(note_id)
     @project = @note.project
-    #mail(to: recipient(recipient_id), subject: subject)
+    #mail(to: recipient(recipient_id), subject: subject("note on wall"))
   end
 
 
@@ -144,12 +145,15 @@ class Notify < ActionMailer::Base
   #   >> @project = Project.last
   #   => #<Project id: 1, name: "Ruby on Rails", path: "ruby_on_rails", ...>
   #   >> subject('Lorem ipsum')
-  #   => "GitLab | Lorem ipsum | Ruby on Rails"
+  #   => "GitLab | Ruby on Rails | Lorem ipsum "
   #
   #   # Accepts multiple arguments
   #   >> subject('Lorem ipsum', 'Dolor sit amet')
   #   => "GitLab | Lorem ipsum | Dolor sit amet"
   def subject(*extra)
-    "GitLab | " << extra.join(' | ') << (@project ? " | #{@project.name}" : "")
+    subject = "GitLab"
+    subject << (@project ? " | #{@project.name_with_namespace}" : "")
+    subject << " | " + extra.join(' | ') if extra.present?
+    subject
   end
 end

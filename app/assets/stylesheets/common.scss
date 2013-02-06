@@ -1,3 +1,7 @@
+html {
+  overflow-y: scroll; 
+}
+
 /** LAYOUT **/
 
 body {
@@ -117,34 +121,10 @@ span.update-author {
 }
 
 .label {
-  background-color: #474D57;
-
-  &.label-tag {
-    background: none;
-    border: none;
-    padding: 4px 6px;
-    color: #444;
-    text-shadow: 0 0 1px #fff;
-
-    &.grouped {
-      float: left;
-      margin-right: 6px;
-      padding: 6px;
-    }
-  }
-  &.label-issue {
-    background-color: #eee;
-    border: 1px solid #ccc;
-    padding: 4px 6px;
-    color: #444;
-    text-shadow: 0 0 1px #fff;
-
-    &.grouped {
-      float: left;
-      margin-right: 6px;
-      padding: 6px;
-    }
-  }
+  padding: 0px 4px;
+  font-size: 10px;
+  font-style: normal;
+  background-color: $link_color;
 
   &.label-success {
     background-color: #8D8;
@@ -395,6 +375,7 @@ li.note {
         font-size: 48px;
         padding: 20px;
         text-align: center;
+        font-weight: normal;
       }
     }
   }
@@ -425,7 +406,7 @@ li.note {
 
 
 .supp_diff_link,
-.mr_show_all_commits {
+.show-all-commits {
   cursor: pointer;
 }
 
@@ -462,6 +443,19 @@ li.note {
   padding: 10px;
   margin-bottom: 10px;
   background: #FEE;
+  padding-left: 20px;
+
+  &.centered {
+    text-align: center;
+  }
+}
+
+.warning_message {
+  border-left: 4px solid #ed9;
+  color: #b90;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #ffffe6;
   padding-left: 20px;
 
   &.centered {
@@ -555,4 +549,10 @@ h1.http_status_code {
       }
     }
   }
+}
+
+img.emoji {
+  height: 20px;
+  vertical-align: middle;
+  width: 20px;
 }
