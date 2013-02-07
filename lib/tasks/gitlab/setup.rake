@@ -9,7 +9,6 @@ namespace :gitlab do
 
     puts "This will create the necessary database tables and seed the database."
     puts "You will lose any previous data stored in the database."
-    ask_to_continue
     puts ""
 
     Rake::Task["db:setup"].invoke
