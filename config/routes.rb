@@ -1,6 +1,10 @@
 require 'sidekiq/web'
 
 Gitlab::Application.routes.draw do
+
+  match '/users/sign_in' => redirect("/users/auth/shibboleth/callback")
+  match '/users/sign_out' => redirect("https://login.cern.ch/adfs/ls/?wa=wsignout1.0")
+
   #
   # Search
   #
