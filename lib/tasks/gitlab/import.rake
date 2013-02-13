@@ -49,7 +49,7 @@ namespace :gitlab do
             :wiki_enabled => 0,
           }
 
-          project = Project.create_by_user(project_params, user)
+          project = Projects::CreateContext.new(user, project_params).execute
 
           if project.valid?
             puts " * Created #{project.name} (#{repo_name})".green
