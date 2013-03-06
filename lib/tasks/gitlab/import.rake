@@ -68,12 +68,10 @@ namespace :gitlab do
       password = Devise.friendly_token[0, 8].downcase
       @user = User.new({
         extern_uid: 'CN=' + args.login + ',OU=Users,OU=Organic Units,DC=cern,DC=ch',
-        provider: 'ldap',
+        provider: 'shibboleth',
         name: args.login,
-        username: args.email.match(/^[^@]*/)[0],
-        email: args.email,
-        password: 'asdqwe123',
-        password_confirmation: 'asdqwe123',
+        username: args.login,
+        email: args.login+'@cern.ch',
         projects_limit: Gitlab.config.gitlab.default_projects_limit,
       }, as: :admin)
       @user.blocked = false

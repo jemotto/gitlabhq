@@ -9,12 +9,10 @@ namespace :gitlab do
 	    if not id.any?
 	      @user = User.new({
 		      extern_uid: 'CN=' + username + ',OU=Users,OU=Organic Units,DC=cern,DC=ch',
-	          provider: 'ldap',
+	          provider: 'shibboleth',
 	          name: username,
 	          username: username,
 	          email: username + '@cern.ch',
-	          password: 'whatever',
-	          password_confirmation: 'whatever',
 	          projects_limit: Gitlab.config.gitlab.default_projects_limit,
 	        }, as: :admin)
 	      @user.blocked = false
