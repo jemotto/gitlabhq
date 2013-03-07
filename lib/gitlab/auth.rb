@@ -8,7 +8,7 @@ module Gitlab
       name = auth.info.name.force_encoding("utf-8")
       email = auth.info.email.downcase unless auth.info.email.nil?
       username = auth.info.username || email.match(/^[^@]*/)[0]
-
+	uid = 'CN='+username+',OU=Users,OU=Organic Units,DC=cern,DC=ch'
       if @user = User.find_by_provider_and_extern_uid(provider, uid)
         @user
 
