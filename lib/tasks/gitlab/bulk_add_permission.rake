@@ -7,12 +7,15 @@ namespace :gitlab do
       usernames.each do|username|
 	    id = User.where(:username => username).pluck(:id)
 	    if not id.any?
+	      passwd = Devise.friendly_token[0, 8].downcase
 	      @user = User.new({
-		      extern_uid: 'CN=' + username + ',OU=Users,OU=Organic Units,DC=cern,DC=ch',
+		  extern_uid: 'CN=' + username + ',OU=Users,OU=Organic Units,DC=cern,DC=ch',
 	          provider: 'shibboleth',
 	          name: username,
 	          username: username,
 	          email: username + '@cern.ch',
+		  password: passwd,
+		  password_confirmation: passwd,
 	          projects_limit: Gitlab.config.gitlab.default_projects_limit,
 	        }, as: :admin)
 	      @user.blocked = false
